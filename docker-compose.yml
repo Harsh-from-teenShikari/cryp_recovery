@@ -1,0 +1,48 @@
+version: "3.9"
+services:
+  backend:
+    build: ./backend
+    container_name: sisyphus_backend
+    ports:
+      - "8001:8001"
+    environment:
+      - DATABASE_URL=postgresql://sisyphus:password@postgres:5432/sisyphus
+      - JWT_SECRET=super-secret-key
+    depends_on:
+      postgres:
+        condition: service_started
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: sisyphus_postgres
+    environment:
+      POSTGRES_USER: sisyphus
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: sisyphus
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: sisyphus_prometheus
+    volumes:
+      - ./infrastructure/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    depends_on:
+      - backend
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: sisyphus_grafana
+    ports:
+      - "3001:3000"
+    volumes:
+      - ./infrastructure/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
+    depends_on:
+      - prometheus
+
+volumes:
+  pgdata:
